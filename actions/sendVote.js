@@ -49,6 +49,7 @@ module.exports =
                   {
                     if (result.author.length > 0 && result != undefined)
                     {
+                      var on_ssio = JSON.parse(result.json_metadata)
                       // Send vote ! 
                       isVote.isVoted(author1, permlink, voters[0].username)
                         .then(function(val)
