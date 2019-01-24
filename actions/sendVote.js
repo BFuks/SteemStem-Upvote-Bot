@@ -101,6 +101,7 @@ module.exports =
                           else { return message.channel.send("Already upvoted !") }
                         }).catch(function(err) { console.log("Error : " + err); return message.channel.send("Error please try again !") })
                     }
+                    else
                     { return message.channel.send("Invalid url !") }
                   }
                 })
