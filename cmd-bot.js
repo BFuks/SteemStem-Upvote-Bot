@@ -167,13 +167,13 @@ module.exports = {
           return message.channel.send('Apparently, that Steemit user doesn\'t exist.')
         } 
 
-        return membersDb.setMemberToAList(username, 'blacklist', message);
-        });
+        return membersDb.setMemberToAList(username, 'blacklist', message)
+        })
     },
 
     unblacklist_member: function(message){
       if (typeof message.content === 'undefined' || message.content.length < 1) {
-        return message.channel.send('Invalid data!');
+        return message.channel.send('Invalid data!')
       }
 
       if (!message.member.permissions.has('ADMINISTRATOR')) {
@@ -195,7 +195,7 @@ module.exports = {
           return message.channel.send('Apparently, that Steemit user doesn\'t exist.')
         }
 
-        return membersDb.removeUserFromLists(username, message);
-      });        
+        return membersDb.removeUserFromLists(username, message)
+      })
     },
-}; //End module
+} //End module
