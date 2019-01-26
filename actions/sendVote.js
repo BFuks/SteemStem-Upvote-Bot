@@ -40,10 +40,16 @@ module.exports = {
                                         return message.channel.send("Error ! Please try again !")
                                     } else {
                                         if (result.author.length > 0 && result != undefined) {
+                                            var on_ssio = JSON.parse(result.json_metadata)
                                             // Send vote ! 
                                             isVote.isVoted(author1, permlink, voters[0].username)
                                                 .then(function(val) {
                                                     if (val) {
+                                                        if(on_ssio.app=='steemstem')
+                                                        {
+                                                          message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(100,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+                                                          value1 = Math.min(100,parseInt(value1)+5)
+                                                        }
                                                         var weight1 = parseInt(value1) * 100
                                                         Vote.upvote(voters[0].wif, voters[0].username, author1, permlink, weight1)
                                                             .then(function(val) {
@@ -109,10 +115,16 @@ module.exports = {
                                     return message.channel.send("Error ! Please try again !")
                                 } else {
                                     if (result.author.length > 0 && result != undefined) {
+                                        var on_ssio = JSON.parse(result.json_metadata)
                                         // Send vote ! 
                                         isVote.isVoted(author1, permlink, voters[0].username)
                                             .then(function(val) {
                                                 if (val) {
+                                                    if(on_ssio.app=='steemstem')
+                                                    {
+                                                      message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(100,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+                                                      value1 = Math.min(100,parseInt(value1)+5)
+                                                    }
                                                     var weight1 = parseInt(value1) * 100
                                                     Vote.upvote(voters[0].wif, voters[0].username, author1, permlink, weight1)
                                                         .then(function(val) {
