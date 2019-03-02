@@ -65,15 +65,44 @@ module.exports =
                   	} else {
                   	  if (result.author.length > 0 && result != undefined) {
                   	  	var on_ssio = JSON.parse(result.json_metadata)
+                                var is_benef = false
+                                var bnf_val = 0
+                                if(result.beneficiaries)
+                                {
+                                  for (bnf=0; bnf<result.beneficiaries.length; bnf+=1)
+                                    { if(result.beneficiaries[bnf].account=='steemstem') { is_benef = true; bnf_val = parseInt(result.beneficiaries[bnf].weight)/100; } }
+                                }
+                                bnf_val = Math.min(bnf_val,5)
                   	  	// Send vote ! 
                   	  	isVote.isVoted(author1, permlink, voters[0].username)
                   	  	  .then(function(val) {
                   	  	  	if (val) {
                   	  	  	  if(on_ssio.app=='steemstem')
                   	  	  	  {
+                                            if(parseInt(value1)<50)
+                                            {
+                  	  	  	  	message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(49,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+                  	  	  	  	value1 = Math.min(49,parseInt(value1)+5)
+                                            }
+                                            else
+                                            {
                   	  	  	  	message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(100,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
                   	  	  	  	value1 = Math.min(100,parseInt(value1)+5)
+                                            }
                   	  	  	  }
+          	  	  	  	  if(is_benef)
+          	  	  		  {
+                                            if(parseInt(value1)<50)
+                                            {
+                  	  	  	  	message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(49,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+                  	  	  	  	value1 = Math.min(49,parseInt(value1)+bnf_val)
+                                            }
+                                            else
+                                            {
+                  	  	  	  	message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(100,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+          	  	  		  	value1 = Math.min(100,parseInt(value1)+bnf_val)
+                                            }
+          	  	  		  }
                   	  	  	  var weight1 = parseInt(value1) * 100
                   	  	  	  Vote.upvote(voters[0].wif, voters[0].username, author1, permlink, weight1)
                   	  	  	    .then(function(val) {
@@ -141,14 +170,43 @@ module.exports =
           	  	  } else {
           	  	  	if (result.author.length > 0 && result != undefined) {
           	  	  	  var on_ssio = JSON.parse(result.json_metadata)
+                                  var is_benef = false
+                                  var bnf_val = 0
+                                  if(result.beneficiaries)
+                                  {
+                                    for (bnf=0; bnf<result.beneficiaries.length; bnf+=1)
+                                      { if(result.beneficiaries[bnf].account=='steemstem') { is_benef = true; bnf_val = parseInt(result.beneficiaries[bnf].weight)/100; } }
+                                  }
+                                  bnf_val = Math.min(bnf_val,5)
           	  	  	  // Send vote ! 
           	  	  	  isVote.isVoted(author1, permlink, voters[0].username)
           	  	  	  .then(function(val) {
           	  	  	  	if (val) {
           	  	  	  	  if(on_ssio.app=='steemstem')
           	  	  		  {
+                                            if(parseInt(value1)<50)
+                                            {
+                  	  	  	  	message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(49,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+                  	  	  	  	value1 = Math.min(49,parseInt(value1)+5)
+                                            }
+                                            else
+                                            {
           	  	  		  	message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(100,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
           	  	  		  	value1 = Math.min(100,parseInt(value1)+5)
+                                            }
+          	  	  		  }
+          	  	  	  	  if(is_benef)
+          	  	  		  {
+                                            if(parseInt(value1)<50)
+                                            {
+                  	  	  	  	message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(49,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+                  	  	  	  	value1 = Math.min(49,parseInt(value1)+bnf_val)
+                                            }
+                                            else
+                                            {
+                  	  	  	  	message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(100,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
+          	  	  		  	value1 = Math.min(100,parseInt(value1)+bnf_val)
+                                            }
           	  	  		  }
           	  	  		  var weight1 = parseInt(value1) * 100
           	  	  		  Vote.upvote(voters[0].wif, voters[0].username, author1, permlink, weight1)
