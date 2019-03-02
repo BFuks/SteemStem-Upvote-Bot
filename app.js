@@ -35,6 +35,10 @@ bot.on("message", async message => {
             return cmd.update_role(message);
         case "display_role":
             return cmd.display_role(message);
+        case "blacklist":
+            return cmd.blacklist_member(message);
+        case "unblacklist":
+            return cmd.unblacklist_member(message);            
         default:
             console.log('--------------- Unknown command');
     }

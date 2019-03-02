@@ -4,7 +4,8 @@ const config = require("./config.json");
 
 const bot = new Discord.Client();
 
-var db = require("./db/curator.js");
+var curatorsDb = require("./db/curator.js");
+var membersDb = require("./db/steemitMember.js");
 var modules = require("./actions/sendVote.js")
 bot.login(config.token);
 
@@ -37,7 +38,7 @@ module.exports = {
             if (bot.users.get(id) != undefined) {
                 name = bot.users.get(id).username
                 if (name != undefined) {
-                    return db.init(id, name, "community", message)
+                    return curatorsDb.init(id, name, "community", message)
                 } else {
                     return message.channel.send("User not found ! ")
                 }
@@ -60,7 +61,7 @@ module.exports = {
             if (bot.users.get(id) != undefined) {
                 name = bot.users.get(id).username
                 if (name != undefined) {
-                    return db.init(id, name, "general", message)
+                    return curatorsDb.init(id, name, "general", message)
                 } else {
                     return message.channel.send("User not found !")
                 }
@@ -83,7 +84,7 @@ module.exports = {
             if (bot.users.get(id) != undefined) {
                 name = bot.users.get(id).username
                 if (name != undefined) {
-                    return db.deleteUser(id, message)
+                    return curatorsDb.deleteUser(id, message)
                 } else {
                     return message.channel.send("User not found !")
                 }
@@ -106,7 +107,7 @@ module.exports = {
             if (bot.users.get(id) != undefined) {
                 name = bot.users.get(id).username
                 if (name != undefined) {
-                    return db.updateRoleUser(id, name, message)
+                    return curatorsDb.updateRoleUser(id, name, message)
                 } else {
                     return message.channel.send("User not found !")
                 }
@@ -129,7 +130,7 @@ module.exports = {
             if (bot.users.get(id) != undefined) {
                 name = bot.users.get(id).username
                 if (name != undefined) {
-                    return db.displayRoleUser(id, message)
+                    return curatorsDb.displayRoleUser(id, message)
                 } else {
                     return message.channel.send("User not found !")
                 }
@@ -139,5 +140,62 @@ module.exports = {
         } else {
             return message.channel.send("Not authorized ! This action is reserved to admin's only !")
         }
-    }
-}; //End module
+    },
+
+    blacklist_member: function(message) {
+
+      if (typeof message.content === 'undefined' || message.content.length < 1) {
+        return message.channel.send('Invalid data !')
+      }
+
+      if (!message.member.permissions.has('ADMINISTRATOR')) {
+        return message.channel.send('Not authorized to do this!')
+      }
+
+      let username = message.content.trim().split(/\s+/)[1]
+
+      if (typeof username === 'undefined'){
+        return message.channel.send('It seems that you didn\'t specify a Steemit user to be blacklisted.')
+      }
+
+      steem.api.getAccounts([username], function(err, res) {
+        if (err) {
+          return message.channel.send('Error! Try again.')
+        }
+
+        if (res.length === 0) {
+          return message.channel.send('Apparently, that Steemit user doesn\'t exist.')
+        } 
+
+        return membersDb.setMemberToAList(username, 'blacklist', message)
+        })
+    },
+
+    unblacklist_member: function(message){
+      if (typeof message.content === 'undefined' || message.content.length < 1) {
+        return message.channel.send('Invalid data!')
+      }
+
+      if (!message.member.permissions.has('ADMINISTRATOR')) {
+        return message.channel.send('Not authorized to do this!')
+      }
+
+      let username = message.content.trim().split(/\s+/)[1]
+
+      if (typeof username === 'undefined'){
+        return message.channel.send('Please specify a Steemit user.')
+      }
+
+      steem.api.getAccounts([username], function(err, res) {
+        if (err) {
+          return message.channel.send('Error! Try again.')
+        }
+
+        if (res.length === 0) {
+          return message.channel.send('Apparently, that Steemit user doesn\'t exist.')
+        }
+
+        return membersDb.removeUserFromLists(username, message)
+      })
+    },
+} //End module
