@@ -12,6 +12,7 @@ var SteemitMemberModel = mongoose.model('steemit_members', SteemitMemberSchema.S
 var Vote = require('./upvote.js')
 var isVote = require('./isVoted.js')
 var Comment = require('./sendComment.js')
+var Resteem = require('./sendResteem.js')
 mongoose.connect(config.db_url)
 
 var community_value = 5
@@ -121,6 +122,8 @@ module.exports =
                   	  	  	      	  	  	//Send comment
                   	  	  	      	  	  	message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
                   	  	  	      	  	  	message.channel.send("Sending comment...")
+                                            //Try resteem (not necessary since it's a community curator):
+                                            // Resteem.sendResteem(message, author1, permlink, value1, value2)
                   	  	  	      	  	  	return Comment.sendComment(author1, permlink, value1, value2, message,  is_benef, isStemApp)
                   	  	  	      	  	  } else {
                   	  	  	      	  	  	console.log("No val from @dna-replication upvote !")
@@ -133,11 +136,14 @@ module.exports =
                   	  	  	      	  	message.channel.send("Already upvoted by @" + voters[1].username)
                   	  	  	      	  }
                   	  	  	      	}).catch(function(err) {
+                                        console.log("Error : " + err)
                   	  	  	      	    return message.channel.send("Error in is voted dna-replication !")
                   	  	  	      	})
                   	  	  	      } else {
                   	  	  	        // Send comment
                   	  	  	        message.channel.send("Sending comment...")
+                                    //Try resteem (not necessary since it's a community curator):
+                                    //Resteem.sendResteem(message, author1, permlink, value1, value2)
                   	  	  	        return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
                   	  	  	      }
                   	  	  	    }).catch(function(err) {
@@ -229,6 +235,8 @@ module.exports =
           	  	  		  	  	  	  //Send comment
           	  	  		  	  	  	  message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
           	  	  		  	  	  	  message.channel.send("Sending comment...")
+                                    //Try resteem:
+                                    Resteem.sendResteem(message, author1, permlink, value1, value2)
           	  	  		  	  	  	  return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
           	  	  		  	  	  	} else {
           	  	  		  	  	  	  return console.log("No val from @dna-replication upvote !")
@@ -244,6 +252,8 @@ module.exports =
           	  	  		  	    return message.channel.send("Error in is voted dna-replication !")
           	  	  		  	  })
           	  	  		  	} else {
+                            //Try resteem:
+                            Resteem.sendResteem(message, author1, permlink, value1, value2)
           	  	  		  	  // Send comment
           	  	  		  	  message.channel.send("Sending comment...")
           	  	  		  	  return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
