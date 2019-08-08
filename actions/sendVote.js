@@ -123,7 +123,7 @@ module.exports =
                   	  	  	      	  	  	message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
                   	  	  	      	  	  	message.channel.send("Sending comment...")
                                             //Try resteem (not necessary since it's a community curator):
-                                            // Resteem.sendResteem(message, author1, permlink, value1, value2)
+                                            // Resteem.sendResteem(message, author1, permlink, value1)
                   	  	  	      	  	  	return Comment.sendComment(author1, permlink, value1, value2, message,  is_benef, isStemApp)
                   	  	  	      	  	  } else {
                   	  	  	      	  	  	console.log("No val from @dna-replication upvote !")
@@ -143,7 +143,7 @@ module.exports =
                   	  	  	        // Send comment
                   	  	  	        message.channel.send("Sending comment...")
                                     //Try resteem (not necessary since it's a community curator):
-                                    //Resteem.sendResteem(message, author1, permlink, value1, value2)
+                                    //Resteem.sendResteem(message, author1, permlink, value1)
                   	  	  	        return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
                   	  	  	      }
                   	  	  	    }).catch(function(err) {
@@ -236,7 +236,7 @@ module.exports =
           	  	  		  	  	  	  message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
           	  	  		  	  	  	  message.channel.send("Sending comment...")
                                     //Try resteem:
-                                    Resteem.sendResteem(message, author1, permlink, value1, value2)
+                                    Resteem.sendResteem(message, author1, permlink, value1)
           	  	  		  	  	  	  return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
           	  	  		  	  	  	} else {
           	  	  		  	  	  	  return console.log("No val from @dna-replication upvote !")
@@ -253,7 +253,7 @@ module.exports =
           	  	  		  	  })
           	  	  		  	} else {
                             //Try resteem:
-                            Resteem.sendResteem(message, author1, permlink, value1, value2)
+                            Resteem.sendResteem(message, author1, permlink, value1)
           	  	  		  	  // Send comment
           	  	  		  	  message.channel.send("Sending comment...")
           	  	  		  	  return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
