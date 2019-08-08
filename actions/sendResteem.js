@@ -10,8 +10,8 @@ const TeamMemberModel = mongoose.model('team_members', TeamMemberSchema.TeamMemb
 
 
 module.exports = {
-	sendResteem: (message, author, permlink, value1, value2) => {
-		if (value1 < 65 || value2 < 65) {
+	sendResteem: (message, author, permlink, value1) => {
+		if (value1 < 65) {
 			console.log('No high enough for a resteem')
 			return
 		}
