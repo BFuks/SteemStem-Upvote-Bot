@@ -6,7 +6,6 @@ var CheckComment = require('./isComment.js');
 
 module.exports = {
     sendComment: function(author, permlink, value1, value2, message, isBenef, isStemApp) {
-        console("en sendComment:", isBenef, isStemApp)
         var wif = config.bot_comment[0].wif;
         var admin = config.bot_comment[0].username;
         var permlink2 = steem.formatter.commentPermlink(author, permlink);

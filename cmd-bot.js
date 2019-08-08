@@ -6,6 +6,7 @@ const bot = new Discord.Client();
 
 var curatorsDb = require("./db/curator.js");
 var membersDb = require("./db/steemitMember.js");
+var teamMembersDb = require('./db/teamMember.js')
 var modules = require("./actions/sendVote.js")
 bot.login(config.token);
 
@@ -196,6 +197,68 @@ module.exports = {
         }
 
         return membersDb.removeUserFromLists(username, message)
+      })
+    },
+
+    add_team_member: function(message) {
+      if (typeof message.content === 'undefined' || message.content.length < 1) {
+        return message.channel.send('Invalid data!')
+      }
+
+      if (!message.member.permissions.has('ADMINISTRATOR')) {
+        return message.channel.send('Not authorized to do this!')
+      }
+
+      let users = message.content.trim().split(/\s+/)
+      if (users.length <= 1) {
+        return message.channel.send('Invalid data!!')
+      }      
+      users.shift()
+      users = [...new Set(users)]
+      
+      steem.api.getAccounts(users, (err, res) => {
+        if (err) {
+            console.log("Error: " + err)
+            return message.channel.send('Error when fetching the usernames from Steem')
+        }
+        let nusers = users.filter((user) => res.find((e) => e.name === user))
+        console.log("filtered users: " + nusers)
+        if (nusers.length == 0) {
+            return message.channel.send('None of the Steem usernames provided is valid')
+        } 
+
+        return teamMembersDb.add(nusers, message)
+      })
+    },
+
+    delete_team_member: function(message) {
+      if (typeof message.content === 'undefined' || message.content.length < 1) {
+        return message.channel.send('Invalid data!')
+      }
+
+      if (!message.member.permissions.has('ADMINISTRATOR')) {
+        return message.channel.send('Not authorized to do this!')
+      }
+
+      let users = message.content.trim().split(/\s+/)
+      if (users.length <= 1) {
+        return message.channel.send('Invalid data!!')
+      }      
+      users.shift()
+      users = [...new Set(users)]
+      
+      steem.api.getAccounts(users, (err, res) => {
+        if (err) {
+            console.log("Error: " + err)
+            return message.channel.send('Error when fetching the usernames from Steem')
+        }
+        let nusers = users.filter((user) => res.find((e) => e.name === user))
+        // console.log("users filtered: " + nusers)
+        if (nusers.length == 0) {
+            return message.channel.send('None of the Steem usernames provided is valid')
+        } 
+
+        return teamMembersDb.remove(nusers, message)
       })
     },
 } //End module

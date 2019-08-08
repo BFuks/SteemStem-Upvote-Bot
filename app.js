@@ -38,7 +38,11 @@ bot.on("message", async message => {
         case "blacklist":
             return cmd.blacklist_member(message);
         case "unblacklist":
-            return cmd.unblacklist_member(message);            
+            return cmd.unblacklist_member(message);
+        case "add_team_member":
+            return cmd.add_team_member(message);
+        case "delete_team_member":
+            return cmd.delete_team_member(message);            
         default:
             console.log('--------------- Unknown command');
     }

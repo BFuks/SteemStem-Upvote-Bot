@@ -43,7 +43,6 @@ module.exports = {
         })
 
       } else {
-
         if (res.list === list) {
           return message.channel.send('Already in that list.')
         }
