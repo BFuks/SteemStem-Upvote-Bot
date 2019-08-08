@@ -2,11 +2,11 @@ const steem = require("steem")
 
 
 module.exports = {
-	resteem: (wif, account, author, permlink) => {
+	resteem: (wif, myaccount, myauthor, mypermlink) => {
 		const json = JSON.stringify(['reblog', {
-			account,
-			author,
-			permlink
+			account:  myaccount,
+			author:   myauthor,
+			permlink: mypermlink
 		}])
 		
 		/*const data = {
@@ -17,7 +17,7 @@ module.exports = {
 		}*/
 
 		return new Promise((resolve, reject) => {
-			steem.broadcast.customJson(wif, [], [account], 'follow', json, (err, result) => {
+			steem.broadcast.customJson(wif, [], [myaccount], 'follow', json, (err, result) => {
 			// steem.broadcast.json(data, wif, (err, result) => {
 				if (err) {
 					console.log("Error: " + err)
