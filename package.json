@@ -2,7 +2,6 @@
   "name": "steemstemvotingbot",
   "version": "1.0.0",
   "dependencies": {
-    "cld": "^2.5.1",
     "discord.js": "~11.3.2",
     "moment": "^2.14.0",
     "mongoose": "^5.1.3",
