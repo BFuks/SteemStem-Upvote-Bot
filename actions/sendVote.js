@@ -1,287 +1,176 @@
-const steem = require('steem')
-const config = require('./../config.json')
+// Configurations
+const steem = require('steem');
+const config = require('./../config.json');
 
-var mongoose = require('mongoose')
+// Database
+var mongoose = require('mongoose');
+mongoose.connect(config.db_url);
+var CuratorSchema = require('./../db/curatorSchema.js');
+var CuratorModel = mongoose.model('curators', CuratorSchema.CuratorSchema);
+var SteemitMemberSchema = require('./../db/steemitMemberSchema.js');
+var SteemitMemberModel = mongoose.model('steemit_members', SteemitMemberSchema.SteemitMemberSchema);
 
-var CuratorSchema = require('./../db/curatorSchema.js')
-var CuratorModel = mongoose.model('curators', CuratorSchema.CuratorSchema)
+// Methods
+var Vote = require('./upvote.js');
+var isVote = require('./isVoted.js');
+var Comment = require('./sendComment.js');
+var Resteem = require('./sendResteem.js');
 
-var SteemitMemberSchema = require('./../db/steemitMemberSchema.js')
-var SteemitMemberModel = mongoose.model('steemit_members', SteemitMemberSchema.SteemitMemberSchema)
-
-var Vote = require('./upvote.js')
-var isVote = require('./isVoted.js')
-var Comment = require('./sendComment.js')
-var Resteem = require('./sendResteem.js')
-mongoose.connect(config.db_url)
-
-var community_value = 5
-var general_value = 100
-var voters = config.voters
+// Variables
+var community_value = 10;
+var general_value = 100;
+var voters = config.voters;
 
 module.exports =
 {
   sendVote: function(message, value1, value2, author, permlink)
   {
-    // Value1 = SteemStem Value2 = Curie
-    id = message.author.id
+//    CuratorModel.deleteOne( { user_id: '123456789012345556', role:'general'}, function(err, res)
+//    {
+//      if (!err)
+//      {
+//        if (res.n > 0) { console.log('User deleted'); return; }
+//        else { console.log('Sorry user not found !'); return; }
+//      }
+//       else { console.log('Error ! Please try again'); return; }
+//    });
+//    CuratorModel.update( { user_id: '123456789012345667'}, {role: 'community'}, {upsert: false}, function(err, res)
+//    {
+//      if (!err) { console.log('Error!', err); return; }
+//      else { console.log('Alright!'); return; }
+//    });
+//    console.log(' ');
+//    CuratorModel.find({ role: 'general'}, function(err, res) {  for(let i=0; i<res.length; i++){console.log(i, res[i]);} });
+//    console.log(' ');
+//    CuratorModel.find({ role: 'community'}, function(err, res) {  for(let i=0; i<res.length; i++){console.log(i,res[i]);} });
+
+    console.log('sendVote: Preparing the send a new vote');
+    id = message.author.id;
     CuratorModel.findOne({ user_id: id }, function(err, res)
     {
-      if (err) 
+      // Various checks
+      if (err)  { console('Error with mongoDB on CuratorModel'); return message.channel.send('Error ! Please try again !'); }
+      if (res == null)  { return message.channel.send('Access denied.'); }
+
+      // Everything is fine
+      var role = res.role;
+      console.log(' ** sendVote: voting role = ',role);
+      value1 = parseInt(value1);
+      value2 = parseInt(value2);
+      console.log(' ** sendVote: vote value = ', value1, value2);
+
+      // Checking the black list
+      SteemitMemberModel.findOne({ username: author.replace('@', '').toLowerCase() }, function (error, result)
       {
-      	console('Error with mongod on CuratorModel')
-      	return message.channel.send('Error ! Please try again !')
-      }
-      if (res == null) 
+        if (error) { return message.channel.send('Error ! Please try again !'); }
+        if (result != null && result.list === 'blacklist') { return message.channel.send('Sorry, this user is blacklisted.'); }
+      });
+
+      // Checking vote value
+      let allowed = false;
+      if (role === 'community') { allowed = (value1>=0) && (value1<=community_value) && (value2>=0) && (value2<=community_value); }
+      if (role === 'general')   { allowed = (value1>=0) && (value1<=general_value)   && (value2>=0) && (value2<=general_value);   }
+      console.log(' ** sendVote: post allowed: ', allowed);
+      if(!(value1>0 || value2>0)) { return message.channel.send('At least one of the two vote values should be positive'); }
+      if(!allowed) { return message.channel.send('Invalid vote values'); }
+
+      // Checking whether the article exist and getting its properties
+      author = author.substring(1, author.length);
+      console.log(' ** sendVote: author: ', author, '; permlink: ', permlink);
+      steem.api.getContent(author, permlink, function(error, result)
       {
-      	return message.channel.send('Access denied.') 
-      }
-      else
-      {
-        var role = res.role
-        parseInt(value1)
-        parseInt(value2)
+        // error
+        if(error) { return message.channel.send("Cannot find the post! Please try again !"); }
+        if(!result || result.author.length==0) { return message.channel.send("Cannot find the post! Please try again !"); }
 
-        SteemitMemberModel.findOne({
-            username: author.replace('@', '').toLowerCase()
-        }, function (err, res) {
-          if (err) {
-          	return message.channel.send('Error ! Please try again !')
-          }
-          
-          if (res != null && res.list === 'blacklist') {
-          	return message.channel.send('Sorry, this user is blacklisted.')
-          }
+        // General post information
+        let metadata = JSON.parse(result.json_metadata);
+        let use_app  = (metadata.app =='steemstem');
+        console.log(' ** sendVote: is using the app:', use_app);
+        // Beneficiary information
+        let is_beneficiary = false;
+        let beneficiary_value = 0;
+        if(result.beneficiaries)
+        {
+          for (let bnf=0; bnf<result.beneficiaries.length; bnf+=1)
+            { if(result.beneficiaries[bnf].account=='steemstem') { is_beneficiary = true; beneficiary_value = parseInt(result.beneficiaries[bnf].weight)/100; } }
+        }
+        beneficiary_value = Math.min(beneficiary_value,5);
 
-          if (role === 'community') {
-            if (value1 >= 0 && value1 <= community_value) {
-              if (value2 >= 0 && value2 <= community_value) {
+        // Updating the vote values
+        if(use_app)
+        {
+          message.channel.send(" --> Bonus for using steemstem.io: " + Math.min(100,value1+5) + "% @steemstem upvote (instead of " +value1 + "%).");
+          value1 = Math.min(100,value1+5);
+        }
+        if(is_beneficiary)
+        {
+          message.channel.send(" --> Bonus for including @steemstem as a beneficiary: " + Math.min(100,value1+beneficiary_value) + "% @steemstem upvote (instead of " +value1 + "%).");
+          value1 = Math.min(100,value1+beneficiary_value);
+        }
 
-              	if (value1 > 0) {
-                  // check if the publication exists
-                  author1 = author.substring(1, author.length)
-                  steem.api.getContent(author1, permlink, function(err, result) {
-                  	if (err) {
-                  	  return message.channel.send("Error ! Please try again !")
-                  	} else {
-                  	  if (result.author.length > 0 && result != undefined) {
-                  	  	var on_ssio = JSON.parse(result.json_metadata)
-                        var is_benef = false
-                        var bnf_val = 0
-                        if(result.beneficiaries)
-                        {
-                          for (bnf=0; bnf<result.beneficiaries.length; bnf+=1)
-                          { 
-                            if(result.beneficiaries[bnf].account=='steemstem') { is_benef = true; bnf_val = parseInt(result.beneficiaries[bnf].weight)/100; } 
-                          }
-                        }
-                        bnf_val = Math.min(bnf_val,5)
-                  	  	// Send vote ! 
-                  	  	isVote.isVoted(author1, permlink, voters[0].username)
-                  	  	  .then(function(val) {
-                  	  	  	if (val) {
-                              isStemApp = on_ssio.app =='steemstem'
-                  	  	  	  if(isStemApp)
-                  	  	  	  {
-                                            if(parseInt(value1)<50)
-                                            {
-                  	  	  	  	message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(49,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-                  	  	  	  	value1 = Math.min(49,parseInt(value1)+5)
-                                            }
-                                            else
-                                            {
-                  	  	  	  	message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(100,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-                  	  	  	  	value1 = Math.min(100,parseInt(value1)+5)
-                                            }
-                  	  	  	  }
-          	  	  	  	      if(is_benef)
-          	  	  		        {
-                                            if(parseInt(value1)<50)
-                                            {
-                  	  	  	  	message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(49,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-                  	  	  	  	value1 = Math.min(49,parseInt(value1)+bnf_val)
-                                            }
-                                            else
-                                            {
-                  	  	  	  	message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(100,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-          	  	  		  	      value1 = Math.min(100,parseInt(value1)+bnf_val)
-                                            }
-          	  	  		        }
-                  	  	  	  var weight1 = parseInt(value1) * 100
-                  	  	  	  Vote.upvote(voters[0].wif, voters[0].username, author1, permlink, weight1)
-                  	  	  	    .then(function(val) {
-                  	  	  	      message.channel.send("Upvote from @" + voters[0].username + " done :white_check_mark:")
-                  	  	  	      if (value2 > 0) {
-                  	  	  	      	isVote.isVoted(author1, permlink, voters[1].username)
-                  	  	  	      	.then(function(val) {
-                  	  	  	      	  if (val) {
-                  	  	  	      	  	var weight2 = parseInt(value2) * 100
-                  	  	  	      	  	Vote.upvote(voters[1].wif, voters[1].username, author1, permlink, weight2)
-                  	  	  	      	  	  .then(function(val) {
-                  	  	  	      	  	  	if (val) {
-                  	  	  	      	  	  	//Send comment
-                  	  	  	      	  	  	message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
-                  	  	  	      	  	  	message.channel.send("Sending comment...")
-                                            //Try resteem (not necessary since it's a community curator):
-                                            // Resteem.sendResteem(message, author1, permlink, value1)
-                  	  	  	      	  	  	return Comment.sendComment(author1, permlink, value1, value2, message,  is_benef, isStemApp)
-                  	  	  	      	  	  } else {
-                  	  	  	      	  	  	console.log("No val from @dna-replication upvote !")
-                  	  	  	      	  	  }
-                  	  	  	      	  	}).catch(function(err) {
-                  	  	  	      	  		console.log("Error : " + err)
-                  	  	  	      	  		return message.channel.send("Error in upvote dna replication")
-                  	  	  	      	  	})
-                  	  	  	      	  } else {
-                  	  	  	      	  	message.channel.send("Already upvoted by @" + voters[1].username)
-                  	  	  	      	  }
-                  	  	  	      	}).catch(function(err) {
-                                        console.log("Error : " + err)
-                  	  	  	      	    return message.channel.send("Error in is voted dna-replication !")
-                  	  	  	      	})
-                  	  	  	      } else {
-                  	  	  	        // Send comment
-                  	  	  	        message.channel.send("Sending comment...")
-                                    //Try resteem (not necessary since it's a community curator):
-                                    //Resteem.sendResteem(message, author1, permlink, value1)
-                  	  	  	        return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
-                  	  	  	      }
-                  	  	  	    }).catch(function(err) {
-                  	  	  	      return message.channel.send("Error with @steemstem upvote !")
-                  	  	  	    })
-                  	  	  	} else {
-                  	  	  	  return message.channel.send("Already upvoted !")
-                  	  	  	}
-                  	  	}).catch(function(err) {
-                  	  	  console.log("Error : " + err)
-                  	  	  return message.channel.send("Error please try again !")
-                  	  	})
-                  	  } else {
-                  	  	return message.channel.send("Invalid url !")
-                  	  }
-                  	}
-                  })
-                }
-              } else {
-              	return message.channel.send("Value from Curie not valid. Your limit is 5%")
-              }
-            } else {
-              return message.channel.send("Value from Steemstem not valid. Your limit is 5%")
-            }
 
-          } else if (role === 'general') {
-          	if (value1 > 0 && value1 <= general_value) {
-          	  if (value2 >= 0 && value2 <= general_value) {
-          	  	author1 = author.substring(1, author.length)
-          	  	steem.api.getContent(author1, permlink, function(err, result) {
-          	  	  if (err) {
-          	  	  	return message.channel.send("Error ! Please try again !")
-          	  	  } else {
-          	  	  	if (result.author.length > 0 && result != undefined) {
-          	  	  	  var on_ssio = JSON.parse(result.json_metadata)
-                      var is_benef = false
-                      var bnf_val = 0
-                      if(result.beneficiaries)
+        // Sending vote with steemstem-trig
+        isVote.isVoted(author, permlink, voters[0].username).then(function(val)
+        {
+          console.log(' ** sendVote new voter:', voters[0].username, '  (has already voted:', !val,')');
+          if(val)
+          {
+            Vote.upvote(voters[0].wif, voters[0].username, author, permlink, 100*value1).then(function(val)
+            {
+              console.log('     -> VOTE with ', voters[0].username, '(',value1,'%)');
+              now = new Date().getTime(); while(new Date().getTime() < now + 30000){  }
+              // Upvote with steemstem
+              isVote.isVoted(author, permlink, voters[1].username).then(function(val)
+              {
+                console.log(' ** sendVote new voter:', voters[1].username, '  (has already voted:', !val,')');
+                if(val)
+                {
+                  Vote.upvote(voters[1].wif, voters[1].username, author, permlink, 100*value1).then(function(val)
+                  {
+                    message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
+                    console.log('     -> VOTE with ', voters[1].username, '(',value1,'%)');
+                    // Upvote with curie
+                    if(value2>0)
+                    {
+                      isVote.isVoted(author, permlink, voters[2].username).then(function(val)
                       {
-                        for (bnf=0; bnf<result.beneficiaries.length; bnf+=1)
-                        { 
-                          if(result.beneficiaries[bnf].account=='steemstem') { is_benef = true; bnf_val = parseInt(result.beneficiaries[bnf].weight)/100; } 
+                        console.log(' ** sendVote new voter:', voters[2].username, '  (has already voted:', !val,')');
+                        if(val)
+                        {
+                          Vote.upvote(voters[2].wif, voters[2].username, author, permlink, 100*value2).then(function(val)
+                          {
+                            message.channel.send("Upvote from @" + voters[2].username + " done :white_check_mark:")
+                            console.log('     -> VOTE with ', voters[2].username, '(',value2,'%)');
+                            // Trying resteem
+                            if(author!='steemstem') { Resteem.sendResteem(message, author, permlink, value1); }
+                            // Sending the comment
+                            message.channel.send("Sending comment...");
+                            Comment.sendComment(author, permlink, value1, value2, message, is_beneficiary, use_app);
+                          }).catch(function(myerr) { console.log("Error with the upvote 1: ", myerr); return;});
                         }
-                      }
-                      bnf_val = Math.min(bnf_val,5)
-          	  	  	  // Send vote ! 
-          	  	  	  isVote.isVoted(author1, permlink, voters[0].username)
-          	  	  	  .then(function(val) {
-          	  	  	  	if (val) {
-                          isStemApp = on_ssio.app =='steemstem'
-          	  	  	  	  if(isStemApp)
-          	  	  		    {
-                            if(parseInt(value1)<50)
-                            {
-                              message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(49,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-                              value1 = Math.min(49,parseInt(value1)+5)
-                            }
-                            else
-                            {
-          	  	  		  	     message.channel.send("This post has been posted on steemstem.io --> 5% bonus upvote (" + Math.min(100,parseInt(value1)+5) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-          	  	  		  	     value1 = Math.min(100,parseInt(value1)+5)
-                             }
-          	  	  		    }
-          	  	  	  	  if(is_benef)
-          	  	  		    {
-                            if(parseInt(value1)<50)
-                            {
-                              message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(49,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-                              value1 = Math.min(49,parseInt(value1)+bnf_val)
-                            }
-                            else
-                            {
-                              message.channel.send("This post includes steemstem as a beneficiary --> " + bnf_val +  "% bonus upvote (" + Math.min(100,parseInt(value1)+bnf_val) + "/"+value2+" instead of " +value1 + "/" + value2 + ")")
-          	  	  		  	    value1 = Math.min(100,parseInt(value1)+bnf_val)
-                            }
-          	  	  		    }
-          	  	  		  var weight1 = parseInt(value1) * 100
-          	  	  		  Vote.upvote(voters[0].wif, voters[0].username, author1, permlink, weight1)
-          	  	  		  .then(function(val) {
-          	  	  		    message.channel.send("Upvote from @" + voters[0].username + " done :white_check_mark:")
-          	  	  		  	if (value2 > 0) {
-          	  	  		  	  isVote.isVoted(author1, permlink, voters[1].username)
-          	  	  		  	  .then(function(val) {
-          	  	  		  	  	if (val) {
-          	  	  		  	  	  var weight2 = parseInt(value2) * 100
-          	  	  		  	  	  Vote.upvote(voters[1].wif, voters[1].username, author1, permlink, weight2)
-          	  	  		  	  	  .then(function(val) {
-          	  	  		  	  	    if (val) {
-          	  	  		  	  	  	  //Send comment
-          	  	  		  	  	  	  message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
-          	  	  		  	  	  	  message.channel.send("Sending comment...")
-                                    //Try resteem:
-                                    Resteem.sendResteem(message, author1, permlink, value1)
-          	  	  		  	  	  	  return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
-          	  	  		  	  	  	} else {
-          	  	  		  	  	  	  return console.log("No val from @dna-replication upvote !")
-          	  	  		  	  	  	}
-          	  	  		  	  	  }).catch(function(err) {
-          	  	  		  	  	    console.log("Error : " + err)
-          	  	  		  	  	    return message.channel.send("Error in upvote dna replication")
-          	  	  		  	  	  })
-          	  	  		  	  	} else {
-          	  	  		  	  	  essage.channel.send("Already upvoted by @" + voters[1].username)
-          	  	  		  	  	}
-          	  	  		  	  }).catch(function(err) {
-          	  	  		  	    return message.channel.send("Error in is voted dna-replication !")
-          	  	  		  	  })
-          	  	  		  	} else {
-                            //Try resteem:
-                            Resteem.sendResteem(message, author1, permlink, value1)
-          	  	  		  	  // Send comment
-          	  	  		  	  message.channel.send("Sending comment...")
-          	  	  		  	  return Comment.sendComment(author1, permlink, value1, value2, message, is_benef, isStemApp)
-          	  	  		  	}
-          	  	  		  }).catch(function(err) {
-          	  	  		    return message.channel.send("Error with @steemstem upvote !")
-          	  	  		  })
-          	  	  		} else {
-          	  	  		  	return message.channel.send("Already upvoted !")
-          	  	  		}
-          	  	  	  }).catch(function(err) {
-          	  	  	    console.log("Error : " + err)
-          	  	  		return message.channel.send("Error please try again !")
-          	  	  	  })
-          	  	  	} else {
-          	  	  	  return message.channel.send("Invalid url !")
-          	  	  	}
-          	  	  }
-          	  	})
-          	  } else {
-          	  	return message.channel.send("Value from Curie not valid. Limit is 100% ")
-          	  }
-          	} else {
-          	  return message.channel.send("Value from Steemstem not valid. Limit is 100% or > 0%")
-          	}
+                        else { console.log('     -> already voted...'); }
+                      }).catch(function(myerr) { console.log("Error with test-upvote 1: ",  myerr); return;});
+                    }
+                    else
+                    {
+                      // Trying resteem
+                      if(author!='steemstem') { Resteem.sendResteem(message, author, permlink, value1); }
+                      // Sending the comment
+                      message.channel.send("Sending comment...");
+                      Comment.sendComment(author, permlink, value1, value2, message, is_beneficiary, use_app);
+                    }
+                  }).catch(function(myerr) { console.log("Error with the upvote 1: ", myerr); return;});
+                }
+                else { console.log('     -> already voted...'); }
+              }).catch(function(myerr) { console.log("Error with test-upvote 1: ",  myerr); return;});
+            }).catch(function(myerr) { console.log("Error with the upvote 0: ", myerr); return;});
           }
-        })
-	  }
-    })
+          else { console.log('     -> already voted...'); }
+        }).catch(function(myerr) { console.log("Error with test-upvote 0: ",  myerr); return;});
+
+
+      });
+    });
   }
-} // End module
+}

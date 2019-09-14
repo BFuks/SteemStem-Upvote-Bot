@@ -33,7 +33,8 @@ module.exports = {
 			     	return message.channel.send('Error when requesting the post to determine the language')
 
 			  	} else {
-				let tags = result.json_metadata.tags;
+				let tags =  JSON.parse(result.json_metadata).tags;
+                                console.log('tags = ', tags);
 				for (let ii=0; ii<tags.length; ii++)
 				{
 				  if(excluded_tags.includes(tags[ii]))
