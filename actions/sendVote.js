@@ -109,68 +109,45 @@ module.exports =
           value1 = Math.min(100,value1+beneficiary_value);
         }
 
-
-        // Sending vote with steemstem-trig
-        isVote.isVoted(author, permlink, voters[0].username).then(function(val)
-        {
-          console.log(' ** sendVote new voter:', voters[0].username, '  (has already voted:', !val,')');
-          if(val)
-          {
-            Vote.upvote(voters[0].wif, voters[0].username, author, permlink, 100*value1).then(function(val)
+            // Sending vote with steemstem-trig
+            isVote.isVoted(author, permlink, voters[0].username).then(function(val)
             {
-              console.log('     -> VOTE with ', voters[0].username, '(',value1,'%)');
-              now = new Date().getTime(); while(new Date().getTime() < now + 30000){  }
-              // Upvote with steemstem
-              isVote.isVoted(author, permlink, voters[1].username).then(function(val)
+              console.log(' ** sendVote new voter:', voters[0].username, '  (has already voted:', !val,')');
+              Vote.upvote(voters[0].wif, voters[0].username, author, permlink, 100*value1, skip=!val).then(function(val)
               {
-                console.log(' ** sendVote new voter:', voters[1].username, '  (has already voted:', !val,')');
-                if(val)
+                now = new Date().getTime(); if(!val) { while(new Date().getTime() < now + 30000){  } }
+                // Upvote with steemstem
+                isVote.isVoted(author, permlink, voters[1].username).then(function(val)
                 {
-                  Vote.upvote(voters[1].wif, voters[1].username, author, permlink, 100*value1).then(function(val)
+                  let is_done = !val;
+                  console.log(' ** sendVote new voter:', voters[1].username, '  (has already voted:', !val,')');
+                  Vote.upvote(voters[1].wif, voters[1].username, author, permlink, 100*value1,skip=!val).then(function(val)
                   {
-                    message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:")
-                    console.log('     -> VOTE with ', voters[1].username, '(',value1,'%)');
+                    if(!is_done) { message.channel.send("Upvote from @" + voters[1].username + " done :white_check_mark:"); }
+                    else         { message.channel.send("Already upvoted... skipping!  :x: "); }
                     // Upvote with curie
-                    if(value2>0)
+                    isVote.isVoted(author, permlink, voters[2].username).then(function(val)
                     {
-                      isVote.isVoted(author, permlink, voters[2].username).then(function(val)
-                      {
-                        console.log(' ** sendVote new voter:', voters[2].username, '  (has already voted:', !val,')');
-                        if(val)
+                      console.log(' ** sendVote new voter:', voters[2].username, '  (has already voted:', !val,')');
+                        Vote.upvote(voters[2].wif, voters[2].username, author, permlink, 100*value2, skip=!val).then(function(val)
                         {
-                          Vote.upvote(voters[2].wif, voters[2].username, author, permlink, 100*value2).then(function(val)
+                          if(!is_done && value2>0) { message.channel.send("Upvote from @" + voters[2].username + " done :white_check_mark:") }
+                          // Resteem and comment
+                          if(!is_done && author!='steemstem')
                           {
-                            message.channel.send("Upvote from @" + voters[2].username + " done :white_check_mark:")
-                            console.log('     -> VOTE with ', voters[2].username, '(',value2,'%)');
-                            // Trying resteem
-                            if(author!='steemstem') { Resteem.sendResteem(message, author, permlink, value1); }
-                            // Sending the comment
+                            Resteem.sendResteem(message, author, permlink, value1);
                             message.channel.send("Sending comment...");
                             Comment.sendComment(author, permlink, value1, value2, message, is_beneficiary, use_app);
-                          }).catch(function(myerr) { console.log("Error with the upvote 1: ", myerr); return;});
-                        }
-                        else { console.log('     -> already voted...'); }
-                      }).catch(function(myerr) { console.log("Error with test-upvote 1: ",  myerr); return;});
-                    }
-                    else
-                    {
-                      // Trying resteem
-                      if(author!='steemstem') { Resteem.sendResteem(message, author, permlink, value1); }
-                      // Sending the comment
-                      message.channel.send("Sending comment...");
-                      Comment.sendComment(author, permlink, value1, value2, message, is_beneficiary, use_app);
-                    }
+                          }
+                        }).catch(function(myerr) { console.log("Error with the upvote 2: ", myerr); return;});
+                    }).catch(function(myerr) { console.log("Error with test-upvote 2: ",  myerr); return;});
                   }).catch(function(myerr) { console.log("Error with the upvote 1: ", myerr); return;});
-                }
-                else { console.log('     -> already voted...'); }
-              }).catch(function(myerr) { console.log("Error with test-upvote 1: ",  myerr); return;});
-            }).catch(function(myerr) { console.log("Error with the upvote 0: ", myerr); return;});
-          }
-          else { console.log('     -> already voted...'); }
-        }).catch(function(myerr) { console.log("Error with test-upvote 0: ",  myerr); return;});
-
+                }).catch(function(myerr) { console.log("Error with test-upvote 1: ",  myerr); return;});
+              }).catch(function(myerr) { console.log("Error with the upvote 0: ", myerr); return;});
+            }).catch(function(myerr) { console.log("Error with test-upvote 0: ",  myerr); return;});
 
       });
     });
   }
 }
+
