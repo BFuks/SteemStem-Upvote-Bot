@@ -30,7 +30,7 @@ module.exports = {
                 if (message.member.permissions.has("ADMINISTRATOR")) {
                     curator.save(function(err, res) {
                         if (res) {
-                            return message.channel.send("Role from " + username + " initialized !")
+                            return message.channel.send(" -> " + role + " curator " + username + " added to the DB.")
                         } else {
                             return message.channel.send("Error ! Please try again ! ")
                         }

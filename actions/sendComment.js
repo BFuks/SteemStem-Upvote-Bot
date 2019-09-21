@@ -15,8 +15,8 @@ module.exports =
     else              { content = comment2; }
 
     if     (isBenef && isStemApp) { content = content + BnfAppLine; }
-    else if(isBenef)              { content = content + AppLine;    }
-    else if(isStemApp)            { content = content + BnfLine;    }
+    else if(isBenef)              { content = content + BnfLine;    }
+    else if(isStemApp)            { content = content + AppLine;    }
     else                          { content = content + NotLine;    }
 
     CheckComment.isComment(author, permlink).then(function(val)

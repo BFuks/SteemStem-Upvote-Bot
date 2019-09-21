@@ -34,7 +34,6 @@ module.exports = {
 
 			  	} else {
 				let tags =  JSON.parse(result.json_metadata).tags;
-                                console.log('tags = ', tags);
 				for (let ii=0; ii<tags.length; ii++)
 				{
 				  if(excluded_tags.includes(tags[ii]))
@@ -59,7 +58,7 @@ module.exports = {
 //				          		return
 //				        	}
 //
-				        	Resteem.resteem(voters[0].wif, voters[0].username, author, permlink)
+				        	Resteem.resteem(voters[1].wif, voters[1].username, author, permlink)
 			    			.then((val) => {
 			    				console.log('resteemed')
 			    				return message.channel.send('Resteemed')

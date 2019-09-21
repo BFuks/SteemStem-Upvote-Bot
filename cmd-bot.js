@@ -1,101 +1,106 @@
+// Configuration
 const Discord = require("discord.js");
 const steem = require("steem");
 const config = require("./config.json");
 
+// Initiatlisation
 const bot = new Discord.Client();
-
-var curatorsDb = require("./db/curator.js");
-var membersDb = require("./db/steemitMember.js");
-var teamMembersDb = require('./db/teamMember.js')
-var modules = require("./actions/sendVote.js")
+var curatorsDb    = require("./db/curator.js");
+var membersDb     = require("./db/steemitMember.js");
+var teamMembersDb = require('./db/teamMember.js');
+var modules       = require("./actions/sendVote.js");
 bot.login(config.token);
 
-module.exports = {
-    Vote: function(message) {
-        if (message.content === "undefined" || message.content.length < 1) {
-            return message.channel.send("Invalid data !")
-        }
-        let element = message.content.split(" ")
-        url = element.pop()
-        value = element.pop()
-        let trueValue = value.split("/")
-        curieValue = trueValue.pop()
-        steemstemValue = trueValue.pop()
-        let data = url.split("/")
-        permlink = data.pop()
-        author = data.pop()
-        message.channel.send("I'm going to upvote this post !")
-        return modules.sendVote(message, steemstemValue, curieValue, author, permlink);
-    },
-    community_init: function(message) {
-        if (message.content === "undefined" || message.content.length < 1) {
-            return message.channel.send("Invalid data !")
-        }
-        if (message.member.permissions.has("ADMINISTRATOR")) {
-            let element = message.content.split(" ")
-            username = element.pop();
-            username.trim()
-            id = username.substring(2, username.length - 1)
-            if (bot.users.get(id) != undefined) {
-                name = bot.users.get(id).username
-                if (name != undefined) {
-                    return curatorsDb.init(id, name, "community", message)
-                } else {
-                    return message.channel.send("User not found ! ")
-                }
-            } else {
-                return message.channel.send("User not found !")
-            }
-        } else {
-            return message.channel.send("Not authorized ! This action is reserved to admin's only !")
-        }
-    },
-    general_init: function(message) {
-        if (message.content === "undefined" || message.content.length < 1) {
-            return message.channel.send("Invalid data !")
-        }
-        if (message.member.permissions.has("ADMINISTRATOR")) {
-            let element = message.content.split(" ")
-            username = element.pop();
-            username.trim()
-            id = username.substring(2, username.length - 1)
-            if (bot.users.get(id) != undefined) {
-                name = bot.users.get(id).username
-                if (name != undefined) {
-                    return curatorsDb.init(id, name, "general", message)
-                } else {
-                    return message.channel.send("User not found !")
-                }
-            } else {
-                return message.channel.send("User not found !")
-            }
-        } else {
-            return message.channel.send("Not authorized ! This action is reserved to admin's only !")
-        }
-    },
-    delete_curator: function(message) {
-        if (message.content === "undefined" || message.content.length < 1) {
-            return message.channel.send("Invalid data !")
-        }
-        if (message.member.permissions.has("ADMINISTRATOR")) {
-            let element = message.content.split(" ")
-            username = element.pop();
-            username.trim()
-            id = username.substring(2, username.length - 1)
-            if (bot.users.get(id) != undefined) {
-                name = bot.users.get(id).username
-                if (name != undefined) {
-                    return curatorsDb.deleteUser(id, message)
-                } else {
-                    return message.channel.send("User not found !")
-                }
-            } else {
-                return message.channel.send("User not found!")
-            }
-        } else {
-            return message.channel.send("Not authorized ! This action is reserved to admin's only !")
-        }
-    },
+// The methods
+module.exports =
+{
+  // Vote command
+  Vote: function(message)
+  {
+    if (message.content === "undefined" || message.content.length < 1)
+      { return message.channel.send("Invalid data !") }
+    // Getting the infirmation on the vote
+    let element        = message.content.split(" ");
+    if(element.length!=3) { message.channel.send("Invalid vote command"); return; }
+    let url            = element.pop();
+    let value          = element.pop();
+    let trueValue      = value.split("/")
+    if(trueValue.length!=2) { message.channel.send("Invalid vote command"); return; }
+    let curieValue     = trueValue.pop();
+    let steemstemValue = trueValue.pop();
+    let data           = url.split("/")
+    if(data.length<2) { message.channel.send("Invalid vote command"); return; }
+    let permlink       = data.pop()
+    let author         = data.pop()
+    // Voting message
+    message.channel.send("This post is getting upvoted!")
+    return modules.sendVote(message, steemstemValue, curieValue, author, permlink);
+  },
+
+  // List the curators
+  list_curators: function(message)
+  {
+    if(!message.member.permissions.has("ADMINISTRATOR")) { return message.channel.send('Unauthorized action'); }
+    let mongoose = require('mongoose'); mongoose.connect(config.db_url);
+    let CuratorSchema = require('./db/curatorSchema.js');
+    let CuratorModel = mongoose.model('curators', CuratorSchema.CuratorSchema);
+    CuratorModel.find({}, function(err, res)
+    {
+      // If an error
+      if(err) { console.log('Error when listing all curators'); return; }
+      // else
+      let text = '';
+      for(let i=0; i<res.length; i++)
+      {
+        text = text + (i+1).toString() + '\t' + res[i]['username'] + '   (' + res[i]['role'] + ')\n';
+      }
+      return  message.channel.send(text);
+    });
+  },
+
+  // Add a curator
+  add_curator: function(message, role)
+  {
+    // Checks (permission + syntax)
+    if(!message.member.permissions.has("ADMINISTRATOR")) { return message.channel.send('Unauthorized action'); }
+    if(!message.content) { return message.channel.send("Invalid syntax (add_community_curator).") }
+    let element = message.content.split(' ');
+    if (element.length!=2)  { return message.channel.send("Invalid syntax (delete_curator).") }
+
+    // Adding the curator to the DB (with the correct role)
+    let username = element.pop().trim();
+    message.channel.send('Adding ' + username + ' to the curator database');
+    username = username.substring(2, username.length - 1);
+    if (!bot.users.get(username)) { return message.channel.send(" -> User not found..."); }
+    let name = bot.users.get(username).username;
+    if (name) { return curatorsDb.init(username, name, role, message); }
+    else { return message.channel.send("User not found..."); }
+  },
+
+  // Delete a curator
+  delete_curator: function(message)
+  {
+    // Checks (permission + syntax)
+    if(!message.member.permissions.has("ADMINISTRATOR")) { return message.channel.send('Unauthorized action'); }
+    if(!message.content) { return message.channel.send("Invalid syntax (delete_curator).") }
+    let element = message.content.split(' ');
+    if (element.length!=2)  { return message.channel.send("Invalid syntax (delete_curator).") }
+
+    // Deleting the curator from the DB
+    let username = element.pop().trim();
+    message.channel.send('Deleting ' + username + ' from the curator database');
+    let mongoose = require('mongoose'); mongoose.connect(config.db_url);
+    let CuratorSchema = require('./db/curatorSchema.js');
+    let CuratorModel = mongoose.model('curators', CuratorSchema.CuratorSchema);
+    CuratorModel.deleteOne( { username:username}, function(err, res)
+    {
+      // Non-existing curator
+      if (err) { return message.channel.send(" -> User not found..."); }
+      if (res.n > 0) { return message.channel.send(' -> User deleted'); }
+      else { return message.channel.send(" -> User not found..."); }
+    });
+  },
+
     update_role: function(message) {
         if (message.content === "undefined" || message.content.length < 1) {
             return message.channel.send("Invalid data !")

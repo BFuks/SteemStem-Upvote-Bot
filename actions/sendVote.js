@@ -17,7 +17,7 @@ var Comment = require('./sendComment.js');
 var Resteem = require('./sendResteem.js');
 
 // Variables
-var community_value = 10;
+var community_value = 65;
 var general_value = 100;
 var voters = config.voters;
 
@@ -25,24 +25,12 @@ module.exports =
 {
   sendVote: function(message, value1, value2, author, permlink)
   {
-//    CuratorModel.deleteOne( { user_id: '123456789012345556', role:'general'}, function(err, res)
-//    {
-//      if (!err)
-//      {
-//        if (res.n > 0) { console.log('User deleted'); return; }
-//        else { console.log('Sorry user not found !'); return; }
-//      }
-//       else { console.log('Error ! Please try again'); return; }
-//    });
 //    CuratorModel.update( { user_id: '123456789012345667'}, {role: 'community'}, {upsert: false}, function(err, res)
 //    {
 //      if (!err) { console.log('Error!', err); return; }
 //      else { console.log('Alright!'); return; }
 //    });
 //    console.log(' ');
-//    CuratorModel.find({ role: 'general'}, function(err, res) {  for(let i=0; i<res.length; i++){console.log(i, res[i]);} });
-//    console.log(' ');
-//    CuratorModel.find({ role: 'community'}, function(err, res) {  for(let i=0; i<res.length; i++){console.log(i,res[i]);} });
 
     console.log('sendVote: Preparing the send a new vote');
     id = message.author.id;
@@ -109,13 +97,14 @@ module.exports =
           value1 = Math.min(100,value1+beneficiary_value);
         }
 
+
             // Sending vote with steemstem-trig
             isVote.isVoted(author, permlink, voters[0].username).then(function(val)
             {
               console.log(' ** sendVote new voter:', voters[0].username, '  (has already voted:', !val,')');
               Vote.upvote(voters[0].wif, voters[0].username, author, permlink, 100*value1, skip=!val).then(function(val)
               {
-                now = new Date().getTime(); if(!val) { while(new Date().getTime() < now + 30000){  } }
+                now = new Date().getTime(); if(!val) { while(new Date().getTime() < now + 45000){  } }
                 // Upvote with steemstem
                 isVote.isVoted(author, permlink, voters[1].username).then(function(val)
                 {
@@ -145,6 +134,7 @@ module.exports =
                 }).catch(function(myerr) { console.log("Error with test-upvote 1: ",  myerr); return;});
               }).catch(function(myerr) { console.log("Error with the upvote 0: ", myerr); return;});
             }).catch(function(myerr) { console.log("Error with test-upvote 0: ",  myerr); return;});
+
 
       });
     });
